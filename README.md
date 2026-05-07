@@ -1,0 +1,1 @@
+# Sistema-de-Carga-com-IA-embutida-nos-Consumidores-Containers-e-RabbitMQ
