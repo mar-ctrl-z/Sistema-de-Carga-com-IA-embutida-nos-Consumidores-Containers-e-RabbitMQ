@@ -1,0 +1,64 @@
+services:
+  rabbitmq:
+    image: rabbitmq:3.11-management
+    container_name: rabbitmq
+    hostname: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    networks:
+      - app-net
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_running"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  message-generator:
+    build:
+      context: .
+      dockerfile: messageGenerator/Dockerfile
+    container_name: message-generator
+    # CORREÇÃO: Removidos volumes inexistentes (./libs) — os datasets já são copiados
+    # pelo Dockerfile durante o build, não precisam de volume em runtime
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - app-net
+    restart: on-failure
+
+  consumer-transit:
+    build: consumerTransit/.
+    container_name: consumer-transit
+    # CORREÇÃO: Removido volume ~/.m2 desnecessário em runtime (JAR já está compilado)
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - app-net
+    restart: on-failure
+
+  consumer-vehicle:
+    build: consumerVehicle/.
+    container_name: consumer-vehicle
+    # CORREÇÃO: Removido volume ~/.m2 desnecessário em runtime (JAR já está compilado)
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - app-net
+    restart: on-failure
+
+
+networks:
+  app-net:
+    driver: bridge
+
+volumes:
+  rabbitmq_data:
